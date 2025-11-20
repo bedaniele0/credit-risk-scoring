@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data (large files)
+data/raw/*.csv
+data/raw/*.xlsx
+
+# MLflow
+mlruns/
+mlflow.db
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+
+# Temporary
+*.tmp
+*.temp
+
+# Prompt files (personal)
+Prompt-Claude/

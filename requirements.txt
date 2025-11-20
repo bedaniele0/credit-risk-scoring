@@ -1,0 +1,66 @@
+# Credit Risk Scoring - Dependencies
+# Autor: Ing. Daniel Varela Pérez
+# Email: bedaniele0@gmail.com
+# Fecha: 2025-11-18
+# Metodología: DVP-PRO v2.0
+
+# Core Data Science
+numpy>=1.24.0,<2.0.0
+pandas>=2.0.0,<3.0.0
+scipy>=1.10.0,<2.0.0
+
+# Machine Learning
+scikit-learn>=1.3.0,<2.0.0
+lightgbm>=4.0.0,<5.0.0
+xgboost>=2.0.0,<3.0.0
+imbalanced-learn>=0.11.0,<1.0.0
+
+# Hyperparameter Optimization
+optuna>=3.3.0,<4.0.0
+
+# MLOps & Tracking
+mlflow>=2.8.0,<3.0.0
+
+# Visualization
+matplotlib>=3.7.0,<4.0.0
+seaborn>=0.12.0,<1.0.0
+plotly>=5.17.0,<6.0.0
+
+# Model Serialization
+joblib>=1.3.0,<2.0.0
+cloudpickle>=2.2.0,<3.0.0
+
+# Notebook Support
+ipykernel>=6.25.0,<7.0.0
+jupyter>=1.0.0,<2.0.0
+notebook>=7.0.0,<8.0.0
+ipywidgets>=8.1.0,<9.0.0
+
+# Data Validation
+great-expectations>=0.17.0,<1.0.0
+
+# Progress Bars
+tqdm>=4.66.0,<5.0.0
+
+# Utilities
+python-dotenv>=1.0.0,<2.0.0
+pyyaml>=6.0,<7.0.0
+
+# API Framework (F8 - Productización)
+fastapi>=0.104.0,<1.0.0
+uvicorn[standard]>=0.24.0,<1.0.0
+pydantic>=2.5.0,<3.0.0
+python-multipart>=0.0.6,<1.0.0
+
+# Model Interpretability
+shap>=0.42.0,<1.0.0
+
+# Optuna Integration
+optuna-integration[lightgbm]>=3.6.0,<4.0.0
+
+# Testing
+pytest>=7.4.0,<8.0.0
+httpx>=0.25.0,<1.0.0
+
+# HTTP Client
+requests>=2.31.0,<3.0.0

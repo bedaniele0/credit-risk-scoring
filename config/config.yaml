@@ -1,0 +1,22 @@
+project:
+  name: "credit-risk-scoring"
+  version: "0.1.0"
+  author: "Ing. Daniel Varela Perez"
+  email: "bedaniele0@gmail.com"
+
+paths:
+  raw_data: "data/raw/default of credit card clients.csv"
+  processed_data: "data/processed"
+  models: "models"
+  reports: "reports"
+
+model:
+  random_state: 42
+  test_size: 0.2
+  cv_folds: 5
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+target_variable: "default payment next month"

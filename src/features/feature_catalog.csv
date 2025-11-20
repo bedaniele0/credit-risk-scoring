@@ -1,0 +1,37 @@
+feature,description
+AGE,
+AGE_bin_26-35,
+AGE_bin_36-45,
+AGE_bin_46-60,
+AGE_bin_60+,
+BILL_AMT1,Monto facturado mes t
+BILL_AMT2,Monto facturado mes t
+BILL_AMT3,Monto facturado mes t
+BILL_AMT4,Monto facturado mes t
+BILL_AMT5,Monto facturado mes t
+BILL_AMT6,Monto facturado mes t
+EDUCATION,
+EDUCATION_grouped,
+LIMIT_BAL,
+MARRIAGE,
+MARRIAGE_grouped,
+PAY_0,Historial de retraso (mes t)
+PAY_2,Historial de retraso (mes t)
+PAY_3,Historial de retraso (mes t)
+PAY_4,Historial de retraso (mes t)
+PAY_5,Historial de retraso (mes t)
+PAY_6,Historial de retraso (mes t)
+PAY_AMT1,Historial de retraso (mes t)
+PAY_AMT2,Historial de retraso (mes t)
+PAY_AMT3,Historial de retraso (mes t)
+PAY_AMT4,Historial de retraso (mes t)
+PAY_AMT5,Historial de retraso (mes t)
+PAY_AMT6,Historial de retraso (mes t)
+SEX,
+payment_ratio_1,PAY_AMT/BILL_AMT recortado
+payment_ratio_2,PAY_AMT/BILL_AMT recortado
+payment_ratio_3,PAY_AMT/BILL_AMT recortado
+payment_ratio_4,PAY_AMT/BILL_AMT recortado
+payment_ratio_5,PAY_AMT/BILL_AMT recortado
+payment_ratio_6,PAY_AMT/BILL_AMT recortado
+utilization_1,BILL_AMT/LIMIT_BAL recortado

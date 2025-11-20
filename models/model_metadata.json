@@ -1,0 +1,59 @@
+{
+  "model_name": "LightGBM Credit Risk Scoring",
+  "version": "1.0.0",
+  "created_date": "2025-11-18 15:23:22",
+  "author": "Ing. Daniel Varela P\u00e9rez",
+  "email": "bedaniele0@gmail.com",
+  "base_model": "LightGBM",
+  "calibration_method": "isotonic",
+  "n_features": 36,
+  "n_train_samples": 24000,
+  "n_test_samples": 6000,
+  "target_distribution_train": {
+    "0": 0.7787916666666667,
+    "1": 0.22120833333333334
+  },
+  "target_distribution_test": {
+    "0": 0.7788333333333334,
+    "1": 0.22116666666666668
+  },
+  "best_params": {
+    "num_leaves": 46,
+    "learning_rate": 0.012637124713745373,
+    "n_estimators": 381,
+    "max_depth": 9,
+    "min_child_samples": 24,
+    "feature_fraction": 0.6521833098780689,
+    "bagging_fraction": 0.6018948524228394,
+    "bagging_freq": 2,
+    "reg_alpha": 0.0001250811528398735,
+    "reg_lambda": 2.868622644974536
+  },
+  "metrics": {
+    "model": "LightGBM Calibrado (isotonic)",
+    "accuracy": 0.8185,
+    "precision_class_1": 0.6590909090909091,
+    "recall_class_1": 0.3715146948003014,
+    "f1_class_1": 0.47518072289156627,
+    "precision_class_0": 0.8412033511043412,
+    "recall_class_0": 0.9454312005135888,
+    "auc_roc": 0.7813266450263189,
+    "ks_statistic": 0.42514913955992445,
+    "brier_score": 0.13485294421670008,
+    "log_loss": 0.42886309197970546
+  },
+  "optimized_metrics_f7": {
+    "optimal_threshold": 0.12,
+    "recall": 0.8704,
+    "precision": 0.3107,
+    "f1": 0.4579,
+    "cost_savings": 5466000
+  },
+  "risk_bands": {
+    "approved": {"min": 0.0, "max": 0.2, "label": "APROBADO"},
+    "review": {"min": 0.2, "max": 0.5, "label": "REVISION"},
+    "rejected": {"min": 0.5, "max": 1.0, "label": "RECHAZO"}
+  },
+  "methodology": "DVP-PRO v2.0",
+  "training_date": "2025-11-18"
+}

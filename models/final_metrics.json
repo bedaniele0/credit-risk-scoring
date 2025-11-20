@@ -1,0 +1,13 @@
+{
+  "model": "LightGBM Calibrado (isotonic)",
+  "accuracy": 0.8185,
+  "precision_class_1": 0.6590909090909091,
+  "recall_class_1": 0.3715146948003014,
+  "f1_class_1": 0.47518072289156627,
+  "precision_class_0": 0.8412033511043412,
+  "recall_class_0": 0.9454312005135888,
+  "auc_roc": 0.7813266450263189,
+  "ks_statistic": 0.42514913955992445,
+  "brier_score": 0.13485294421670008,
+  "log_loss": 0.42886309197970546
+}
