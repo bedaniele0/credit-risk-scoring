@@ -1,0 +1,195 @@
+# ============================================================================
+# alerts_config.yaml - Configuración de Alertas Multi-Canal
+# ============================================================================
+# Configuración para Slack, Teams, Email y Webhooks genéricos
+#
+# Autor: Ing. Daniel Varela Perez
+# Email: bedaniele0@gmail.com
+# Tel: +52 55 4189 3428
+# Metodología: DVP-PRO
+# ============================================================================
+
+# ====================
+# SLACK
+# ====================
+slack:
+  enabled: false  # Cambiar a true para habilitar
+  webhook_url: ""  # Obtener de Slack Incoming Webhooks
+  channel: "#credit-risk-alerts"
+  username: "Credit Risk Bot"
+  icon_emoji: ":credit_card:"
+
+# ====================
+# MICROSOFT TEAMS
+# ====================
+teams:
+  enabled: false  # Cambiar a true para habilitar
+  webhook_url: ""  # Obtener de Teams Incoming Webhook
+
+# ====================
+# EMAIL (SMTP)
+# ====================
+email:
+  enabled: false  # Cambiar a true para habilitar
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  smtp_username: ""  # Usuario SMTP
+  smtp_password: ""  # Password o App Password
+  from_email: "alerts@yourcompany.com"
+  to_email: "bedaniele0@gmail.com"
+  use_tls: true
+
+# ====================
+# WEBHOOK GENÉRICO
+# ====================
+webhook:
+  enabled: false  # Cambiar a true para habilitar
+  webhook_url: ""  # URL de tu webhook
+
+# ====================
+# ALERT RULES
+# ====================
+alert_rules:
+  # Data Drift
+  data_drift:
+    enabled: true
+    threshold: 0.2  # PSI threshold
+    severity: "warning"  # info, warning, error, critical
+    channels:
+      - slack
+      - email
+    check_interval_hours: 24
+
+  # Model Performance Degradation
+  performance_degradation:
+    enabled: true
+    metrics:
+      auc_roc:
+        min_threshold: 0.75
+        severity: "error"
+      ks_statistic:
+        min_threshold: 0.30
+        severity: "error"
+      recall:
+        min_threshold: 0.70
+        severity: "warning"
+    channels:
+      - slack
+      - teams
+      - email
+    check_interval_hours: 12
+
+  # Training Completion
+  training_completion:
+    enabled: true
+    notify_on_success: true
+    notify_on_failure: true
+    channels:
+      - slack
+      - email
+
+  # High Risk Predictions
+  high_risk_predictions:
+    enabled: false  # Alertar cuando hay muchos rechazos
+    threshold_percentage: 30  # % de rechazos
+    channels:
+      - slack
+    check_interval_hours: 6
+
+  # API Errors
+  api_errors:
+    enabled: false
+    error_rate_threshold: 0.05  # 5% error rate
+    channels:
+      - slack
+      - teams
+    check_interval_minutes: 15
+
+# ====================
+# ESCALATION POLICY
+# ====================
+escalation:
+  # Escalar a crítico si no se resuelve en X horas
+  escalate_after_hours: 4
+  escalation_channels:
+    - teams
+    - email
+
+# ====================
+# QUIET HOURS
+# ====================
+quiet_hours:
+  enabled: false
+  start_hour: 22  # 10 PM
+  end_hour: 8     # 8 AM
+  timezone: "America/Mexico_City"
+  allowed_severities:
+    - critical  # Solo críticos fuera de horario
+
+# ====================
+# RATE LIMITING
+# ====================
+rate_limiting:
+  enabled: true
+  max_alerts_per_hour: 10
+  max_alerts_per_day: 50
+  duplicate_suppression_minutes: 60  # No duplicar misma alerta en X minutos
+
+# ====================
+# ALERT TEMPLATES
+# ====================
+templates:
+  data_drift:
+    title: "Data Drift Detected: {feature_name}"
+    message: |
+      Drift score ({drift_score:.4f}) exceeds threshold ({threshold:.4f}).
+      Feature: {feature_name}
+
+      Action Required:
+      - Investigate distribution changes
+      - Consider model retraining
+      - Review data pipeline
+
+  performance_degradation:
+    title: "Model Performance Degradation: {metric_name}"
+    message: |
+      Current {metric_name} ({current_value:.4f}) is below expected ({expected_value:.4f}).
+      Degradation: {degradation:.1f}%
+
+      Action Required:
+      - Review recent predictions
+      - Check for data drift
+      - Consider model retraining
+
+  training_success:
+    title: "Model Training Completed Successfully"
+    message: |
+      New model trained and ready for deployment.
+
+      Metrics:
+      - AUC-ROC: {auc_roc:.4f}
+      - KS Statistic: {ks_statistic:.4f}
+      - Recall: {recall:.4f}
+      - Expected Savings: ${expected_savings:,.0f} MXN
+
+  training_failure:
+    title: "Model Training Failed"
+    message: |
+      Training pipeline encountered an error.
+
+      Error: {error_message}
+
+      Action Required:
+      - Check logs for details
+      - Verify data quality
+      - Review pipeline configuration
+
+# ====================
+# DVP-PRO METADATA
+# ====================
+metadata:
+  project: "credit-risk-scoring"
+  version: "1.0.0"
+  methodology: "DVP-PRO"
+  author: "Ing. Daniel Varela Perez"
+  contact: "bedaniele0@gmail.com"

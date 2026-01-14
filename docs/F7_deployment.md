@@ -241,8 +241,8 @@ curl -X POST "http://localhost:8000/predict" \
 
 ```json
 {
-  "probability": 0.1523,
-  "prediction": "DEFAULT",
+  "probability": 0.08,
+  "prediction": "NO_DEFAULT",
   "risk_band": "APROBADO",
   "threshold_used": 0.12,
   "timestamp": "2025-11-18T15:30:00",

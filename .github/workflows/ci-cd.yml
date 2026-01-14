@@ -1,0 +1,361 @@
+# ============================================================================
+# ci-cd.yml - Continuous Integration & Deployment Pipeline
+# ============================================================================
+# Pipeline automatizado para:
+# - Testing (unit + integration)
+# - Linting y formateo
+# - Type checking
+# - Coverage
+# - Docker build
+# - Deployment a dev/staging/prod
+#
+# Autor: Ing. Daniel Varela Perez
+# Email: bedaniele0@gmail.com
+# Tel: +52 55 4189 3428
+# Metodología: DVP-PRO
+# ============================================================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - feature/**
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:  # Manual trigger
+
+env:
+  PYTHON_VERSION: "3.10"
+  POETRY_VERSION: "1.5.1"
+
+jobs:
+  # ====================
+  # JOB 1: CODE QUALITY
+  # ====================
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black ruff mypy
+
+      - name: Run Black (formatting check)
+        run: |
+          black --check src tests
+
+      - name: Run Ruff (linting)
+        run: |
+          ruff check src tests
+
+      - name: Run MyPy (type checking)
+        run: |
+          mypy src --ignore-missing-imports
+        continue-on-error: true  # No fallar por warnings de tipos
+
+  # ====================
+  # JOB 2: TESTING
+  # ====================
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: code-quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-mock
+
+      - name: Run unit tests
+        run: |
+          pytest tests -v -m "not integration" --cov=src --cov-report=xml --cov-report=term
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Run integration tests
+        run: |
+          pytest tests -v -m integration
+        continue-on-error: true  # Integration tests pueden requerir servicios externos
+
+  # ====================
+  # JOB 3: DOCKER BUILD
+  # ====================
+  docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/credit-risk-api
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ====================
+  # JOB 4: DEPLOY TO DEV
+  # ====================
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: development
+      url: https://dev.credit-risk.yourcompany.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to dev server
+        run: |
+          echo "Deploying to development environment..."
+          # Ejemplo con SSH
+          # ssh user@dev-server "docker pull ${{ secrets.DOCKER_USERNAME }}/credit-risk-api:develop && docker-compose up -d"
+
+      - name: Run health check
+        run: |
+          echo "Running health check..."
+          # curl -f https://dev.credit-risk.yourcompany.com/health || exit 1
+
+      - name: Notify Slack
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: "Deployment to DEV: ${{ job.status }}"
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+  # ====================
+  # JOB 5: DEPLOY TO STAGING
+  # ====================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: staging
+      url: https://staging.credit-risk.yourcompany.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging server
+        run: |
+          echo "Deploying to staging environment..."
+          # ssh user@staging-server "docker pull ${{ secrets.DOCKER_USERNAME }}/credit-risk-api:main && docker-compose up -d"
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          # pytest tests/smoke -v
+
+      - name: Run load tests
+        run: |
+          echo "Running load tests..."
+          # locust -f tests/load/locustfile.py --headless -u 100 -r 10 -t 60s
+
+      - name: Notify Teams
+        if: always()
+        run: |
+          echo "Sending Teams notification..."
+          # curl -X POST ${{ secrets.TEAMS_WEBHOOK }} -d '{"text": "Staging deployment: ${{ job.status }}"}'
+
+  # ====================
+  # JOB 6: DEPLOY TO PRODUCTION
+  # ====================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://credit-risk.yourcompany.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: danielvarela  # GitHub username
+          minimum-approvals: 1
+          issue-title: "Deploy to Production"
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          # ssh user@prod-server "docker pull ${{ secrets.DOCKER_USERNAME }}/credit-risk-api:latest && docker-compose up -d --no-downtime"
+
+      - name: Run health check
+        run: |
+          echo "Running health check..."
+          # curl -f https://credit-risk.yourcompany.com/health || exit 1
+
+      - name: Send success notification
+        if: success()
+        run: |
+          echo "Sending success notifications..."
+          # Multi-canal: Slack + Teams + Email
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "DEPLOYMENT FAILED - Rolling back..."
+          # ssh user@prod-server "docker-compose down && docker-compose up -d --previous-version"
+
+  # ====================
+  # JOB 7: SECURITY SCAN
+  # ====================
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: code-quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: "trivy-results.sarif"
+
+      - name: Run Bandit (Python security linter)
+        run: |
+          pip install bandit
+          bandit -r src -f json -o bandit-report.json
+        continue-on-error: true
+
+  # ====================
+  # JOB 8: PERFORMANCE MONITORING
+  # ====================
+  monitoring:
+    name: Deploy Monitoring Stack
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Prometheus + Grafana
+        run: |
+          echo "Deploying monitoring stack..."
+          # docker-compose -f docker-compose.monitoring.yml up -d
+
+      - name: Configure Grafana dashboards
+        run: |
+          echo "Importing Grafana dashboards..."
+          # curl -X POST grafana-api/dashboards -d @dashboards/credit-risk-dashboard.json
+
+# ====================
+# NOTIFICATIONS
+# ====================
+# Al final del pipeline, notificar resultado
+notifications:
+  name: Send Notifications
+  runs-on: ubuntu-latest
+  needs: [deploy-production]
+  if: always()
+
+  steps:
+    - name: Notify on success
+      if: ${{ needs.deploy-production.result == 'success' }}
+      run: |
+        echo "✅ Pipeline completed successfully!"
+
+    - name: Notify on failure
+      if: ${{ needs.deploy-production.result == 'failure' }}
+      run: |
+        echo "❌ Pipeline failed!"

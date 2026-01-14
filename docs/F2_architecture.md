@@ -80,7 +80,14 @@ graph TD
 ```
 **Respuesta**
 ```json
-{ "pd": 0.27, "decision": "review", "model_version": "1.0.0" }
+{
+  "probability": 0.27,
+  "prediction": "DEFAULT",
+  "risk_band": "REVISION",
+  "threshold_used": 0.12,
+  "timestamp": "2025-12-26T18:24:21.352644",
+  "model_version": "1.0.0"
+}
 ```
 
 ---
@@ -114,4 +121,3 @@ graph TD
 - Implementar `make_dataset.py` con validaciones.
 - Definir `feature_catalog.csv` y primeras features derivadas.
 - Preparar notebooks EDA y baseline (LR + LightGBM) con MLflow.
-

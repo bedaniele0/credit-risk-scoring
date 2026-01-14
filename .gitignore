@@ -25,6 +25,7 @@ Thumbs.db
 # Data (large files)
 data/raw/*.csv
 data/raw/*.xlsx
+data/processed/*.csv
 
 # MLflow
 mlruns/
@@ -33,6 +34,12 @@ mlflow.db
 # Logs
 logs/
 *.log
+
+# Test/coverage artifacts
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
 
 # Environment
 .env

@@ -83,8 +83,15 @@
 | **Accuracy** | 0.8185 | - | - |
 | **F1-Score (Default)** | 0.4752 | - | - |
 
+### Optimized Threshold (0.12)
+
+- **Recall:** 0.8704  
+- **Precision:** 0.3107  
+- **F1:** 0.4579  
+- **Cost Savings (reportado):** $5,466,000 MXN (ver `reports/metrics/validation_results.json`)
+
 ### Cross-Validation Results
-- **AUC (CV mean):** 0.7890
+- **AUC (CV mean):** 0.7816
 
 ---
 

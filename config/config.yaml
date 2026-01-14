@@ -19,4 +19,4 @@ logging:
   level: "INFO"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-target_variable: "default payment next month"
+target_variable: "default.payment.next.month"

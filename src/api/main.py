@@ -20,9 +20,15 @@ from typing import Optional, List
 import numpy as np
 import pandas as pd
 import joblib
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from fastapi.routing import APIRoute
+from pydantic import BaseModel, Field, ConfigDict
+from contextlib import asynccontextmanager
+import time
+from scipy import stats
+
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
 # Configuración de logging
 logging.basicConfig(
@@ -39,24 +45,96 @@ REPORTS_DIR = BASE_DIR / "reports"
 # Cargar configuración
 OPTIMAL_THRESHOLD = 0.12  # Threshold optimizado en F7
 
-# Inicializar FastAPI
+# =====================================================
+# METRICAS PROMETHEUS
+# =====================================================
+
+REQUEST_COUNT = Counter(
+    "credit_api_requests_total",
+    "Total de requests HTTP procesadas",
+    ["method", "endpoint", "status"]
+)
+REQUEST_LATENCY = Histogram(
+    "credit_api_request_latency_seconds",
+    "Latencia de requests HTTP",
+    ["endpoint"]
+)
+PREDICTIONS_TOTAL = Counter(
+    "credit_api_predictions_total",
+    "Total de predicciones realizadas",
+    ["mode"]
+)
+MODEL_LOADED_GAUGE = Gauge(
+    "credit_api_model_loaded",
+    "Estado de carga del modelo (1=cargado, 0=no cargado)"
+)
+
+# API Key (opcional, activada si se define API_KEY env)
+API_KEY = os.getenv("API_KEY")
+
+
+class PrometheusRoute(APIRoute):
+    """Route handler instrumentado con Prometheus."""
+
+    def get_route_handler(self):
+        original_route_handler = super().get_route_handler()
+
+        async def custom_route_handler(request: Request) -> Response:
+            start_time = time.perf_counter()
+            response: Response = await original_route_handler(request)
+            elapsed = time.perf_counter() - start_time
+
+            endpoint = request.url.path
+            REQUEST_LATENCY.labels(endpoint=endpoint).observe(elapsed)
+            REQUEST_COUNT.labels(
+                method=request.method,
+                endpoint=endpoint,
+                status=response.status_code
+            ).inc()
+            return response
+
+        return custom_route_handler
+
+
+# =====================================================
+# Inicializar FastAPI con lifespan
+# =====================================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Carga de recursos en startup/shutdown."""
+    global model, baseline_scores
+
+    logger.info("Iniciando app (lifespan)")
+    success = load_model()
+    MODEL_LOADED_GAUGE.set(1 if success else 0)
+
+    if success:
+        try:
+            baseline_scores = compute_reference_scores()
+            if baseline_scores is not None:
+                logger.info("Scores de referencia cargados para PSI/KS")
+        except Exception as e:
+            logger.warning(f"No se pudieron calcular scores de referencia: {e}")
+
+    yield
+
+    # Shutdown hooks (si aplica)
+    logger.info("Apagando app (lifespan)")
+
+
 app = FastAPI(
     title="Credit Risk Scoring API",
     description="""
     API para predicción de riesgo crediticio basada en el dataset UCI Taiwan.
 
     ## Funcionalidades
-    - **Predicción individual**: Predice probabilidad de default para un cliente
-    - **Predicción batch**: Predice para múltiples clientes
-    - **Health check**: Verifica estado del servicio
-    - **Métricas**: Obtiene métricas del modelo
+    - **Predicción individual**: Probabilidad de default y banda de riesgo
+    - **Predicción batch**: Procesa hasta 100 solicitudes
+    - **Health/Métricas**: Estado del modelo y performance
 
     ## Metodología
-    Desarrollado siguiendo la metodología DVP-PRO por Ing. Daniel Varela Pérez.
-
-    ## Contacto
-    - Email: bedaniele0@gmail.com
-    - Tel: +52 55 4189 3428
+    DVP-PRO por Ing. Daniel Varela Pérez.
     """,
     version="1.0.0",
     contact={
@@ -73,6 +151,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.router.route_class = PrometheusRoute
 
 # =====================================================
 # MODELOS PYDANTIC
@@ -80,6 +159,36 @@ app.add_middleware(
 
 class CreditApplication(BaseModel):
     """Schema para una solicitud de crédito individual."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "LIMIT_BAL": 50000,
+                "SEX": 2,
+                "EDUCATION": 2,
+                "MARRIAGE": 1,
+                "AGE": 35,
+                "PAY_0": 0,
+                "PAY_2": 0,
+                "PAY_3": 0,
+                "PAY_4": 0,
+                "PAY_5": 0,
+                "PAY_6": 0,
+                "BILL_AMT1": 40000,
+                "BILL_AMT2": 38000,
+                "BILL_AMT3": 35000,
+                "BILL_AMT4": 32000,
+                "BILL_AMT5": 30000,
+                "BILL_AMT6": 28000,
+                "PAY_AMT1": 2000,
+                "PAY_AMT2": 2000,
+                "PAY_AMT3": 2000,
+                "PAY_AMT4": 2000,
+                "PAY_AMT5": 2000,
+                "PAY_AMT6": 2000
+            }
+        }
+    )
 
     # Variables demográficas
     LIMIT_BAL: float = Field(..., description="Monto del crédito otorgado (NT$)", ge=0)
@@ -112,35 +221,6 @@ class CreditApplication(BaseModel):
     PAY_AMT4: float = Field(..., description="Monto pagado en junio (NT$)", ge=0)
     PAY_AMT5: float = Field(..., description="Monto pagado en mayo (NT$)", ge=0)
     PAY_AMT6: float = Field(..., description="Monto pagado en abril (NT$)", ge=0)
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "LIMIT_BAL": 50000,
-                "SEX": 2,
-                "EDUCATION": 2,
-                "MARRIAGE": 1,
-                "AGE": 35,
-                "PAY_0": 0,
-                "PAY_2": 0,
-                "PAY_3": 0,
-                "PAY_4": 0,
-                "PAY_5": 0,
-                "PAY_6": 0,
-                "BILL_AMT1": 40000,
-                "BILL_AMT2": 38000,
-                "BILL_AMT3": 35000,
-                "BILL_AMT4": 32000,
-                "BILL_AMT5": 30000,
-                "BILL_AMT6": 28000,
-                "PAY_AMT1": 2000,
-                "PAY_AMT2": 2000,
-                "PAY_AMT3": 2000,
-                "PAY_AMT4": 2000,
-                "PAY_AMT5": 2000,
-                "PAY_AMT6": 2000
-            }
-        }
 
 
 class PredictionResponse(BaseModel):
@@ -183,6 +263,11 @@ class MetricsResponse(BaseModel):
     timestamp: str
 
 
+class ScoreDriftRequest(BaseModel):
+    """Payload para monitoreo de drift basado en scores."""
+    scores: List[float] = Field(..., description="Scores actuales (probabilidades de default)")
+
+
 # =====================================================
 # CARGA DEL MODELO
 # =====================================================
@@ -191,6 +276,7 @@ class MetricsResponse(BaseModel):
 model = None
 feature_names = None
 model_metadata = None
+baseline_scores = None
 
 
 def load_model():
@@ -205,6 +291,7 @@ def load_model():
 
         model = joblib.load(model_path)
         logger.info(f"Modelo cargado: {type(model).__name__}")
+        MODEL_LOADED_GAUGE.set(1)
 
         # Cargar nombres de features
         features_path = MODELS_DIR / "feature_names.json"
@@ -229,7 +316,46 @@ def load_model():
 
     except Exception as e:
         logger.error(f"Error cargando modelo: {e}")
+        MODEL_LOADED_GAUGE.set(0)
         return False
+
+
+def compute_reference_scores():
+    """
+    Genera scores de referencia para monitoreo (PSI/KS) usando el dataset procesado.
+    """
+    if model is None:
+        return None
+
+    data_path = BASE_DIR / "data" / "processed" / "credit_data_processed.csv"
+    if not data_path.exists():
+        logger.warning("Dataset de referencia no encontrado para PSI/KS")
+        return None
+
+    df = pd.read_csv(data_path)
+
+    # Remover targets si existen
+    for target_col in ["default.payment.next.month", "default_flag"]:
+        if target_col in df.columns:
+            df = df.drop(columns=[target_col])
+
+    if feature_names:
+        for feat in feature_names:
+            if feat not in df.columns:
+                df[feat] = 0
+        df = df[feature_names]
+
+    scores = model.predict_proba(df)[:, 1]
+    return scores
+
+
+#
+# Carga temprana del modelo (para que los tests y el arranque tengan modelo listo).
+# Si falla, el evento de startup intentará nuevamente y dejará trazas en los logs.
+#
+if model is None:
+    if not load_model():
+        logger.warning("Cargado inicial de modelo fallido; se reintentará en startup")
 
 
 # =====================================================
@@ -316,16 +442,43 @@ def get_risk_band(probability: float) -> str:
         return "RECHAZO"
 
 
+def compute_psi(expected: np.ndarray, actual: np.ndarray, n_bins: int = 10) -> float:
+    """
+    Calcula PSI entre distribuciones esperada (baseline) y actual.
+    """
+    expected = np.asarray(expected, dtype=float)
+    actual = np.asarray(actual, dtype=float)
+
+    bins = np.percentile(expected, np.linspace(0, 100, n_bins + 1))
+    bins[0] = -np.inf
+    bins[-1] = np.inf
+
+    expected_counts = np.histogram(expected, bins=bins)[0]
+    actual_counts = np.histogram(actual, bins=bins)[0]
+
+    expected_pct = (expected_counts + 1e-6) / len(expected)
+    actual_pct = (actual_counts + 1e-6) / len(actual)
+
+    psi = np.sum((actual_pct - expected_pct) * np.log(actual_pct / expected_pct))
+    return float(psi)
+
+
+def require_api_key(request: Request):
+    """
+    Autenticación opcional via API Key.
+
+    Si API_KEY está definida en entorno, se requiere header X-API-Key coincidente.
+    """
+    if API_KEY:
+        key = request.headers.get("X-API-Key")
+        if key != API_KEY:
+            raise HTTPException(status_code=401, detail="API key inválida o ausente")
+    return True
+
+
 # =====================================================
 # ENDPOINTS
 # =====================================================
-
-@app.on_event("startup")
-async def startup_event():
-    """Evento de inicio: cargar modelo."""
-    success = load_model()
-    if not success:
-        logger.error("No se pudo cargar el modelo al iniciar")
 
 
 @app.get("/", tags=["Root"])
@@ -355,7 +508,7 @@ async def health_check():
 
 
 @app.post("/predict", response_model=PredictionResponse, tags=["Predictions"])
-async def predict(application: CreditApplication):
+async def predict(application: CreditApplication, _: bool = Depends(require_api_key)):
     """
     Predice la probabilidad de default para una solicitud de crédito.
 
@@ -368,7 +521,7 @@ async def predict(application: CreditApplication):
 
     try:
         # Convertir a dict y aplicar feature engineering
-        data = application.dict()
+        data = application.model_dump()
         features = engineer_features(data)
 
         # Predecir
@@ -380,6 +533,7 @@ async def predict(application: CreditApplication):
 
         # Log para monitoreo
         logger.info(f"Prediction: prob={probability:.4f}, pred={prediction}, risk={risk_band}")
+        PREDICTIONS_TOTAL.labels(mode="single").inc()
 
         return PredictionResponse(
             probability=round(float(probability), 4),
@@ -396,7 +550,7 @@ async def predict(application: CreditApplication):
 
 
 @app.post("/predict/batch", response_model=BatchPredictionResponse, tags=["Predictions"])
-async def predict_batch(request: BatchPredictionRequest):
+async def predict_batch(request: BatchPredictionRequest, _: bool = Depends(require_api_key)):
     """
     Predice para múltiples solicitudes de crédito.
 
@@ -412,7 +566,7 @@ async def predict_batch(request: BatchPredictionRequest):
         predictions = []
 
         for app in request.applications:
-            data = app.dict()
+            data = app.model_dump()
             features = engineer_features(data)
 
             probability = model.predict_proba(features)[0, 1]
@@ -428,6 +582,8 @@ async def predict_batch(request: BatchPredictionRequest):
                 model_version=model_metadata.get("version", "1.0.0") if model_metadata else "1.0.0"
             ))
 
+        PREDICTIONS_TOTAL.labels(mode="batch").inc(len(predictions))
+
         return BatchPredictionResponse(
             predictions=predictions,
             total_processed=len(predictions),
@@ -440,7 +596,7 @@ async def predict_batch(request: BatchPredictionRequest):
 
 
 @app.get("/metrics", response_model=MetricsResponse, tags=["Metrics"])
-async def get_metrics():
+async def get_metrics(_: bool = Depends(require_api_key)):
     """
     Obtiene las métricas de rendimiento del modelo.
     """
@@ -475,6 +631,53 @@ async def get_metrics():
     except Exception as e:
         logger.error(f"Error obteniendo métricas: {e}")
         raise HTTPException(status_code=500, detail=f"Error obteniendo métricas: {str(e)}")
+
+
+@app.get("/prometheus", tags=["Monitoring"])
+async def prometheus_metrics():
+    """
+    Exposición de métricas Prometheus.
+    """
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.post("/monitoring/drift", tags=["Monitoring"])
+async def monitor_drift(request: ScoreDriftRequest, _: bool = Depends(require_api_key)):
+    """
+    Calcula PSI y KS contra los scores de referencia (baseline).
+    """
+    global baseline_scores
+    if (baseline_scores is None or len(baseline_scores) == 0) and model is not None:
+        baseline_scores = compute_reference_scores()
+
+    if baseline_scores is None or len(baseline_scores) == 0:
+        raise HTTPException(status_code=503, detail="Scores de referencia no disponibles")
+
+    current_scores = np.asarray(request.scores, dtype=float)
+    if current_scores.size == 0:
+        raise HTTPException(status_code=400, detail="Se requieren scores actuales")
+
+    psi_value = compute_psi(baseline_scores, current_scores)
+    ks_stat = stats.ks_2samp(baseline_scores, current_scores).statistic
+
+    status = "ok"
+    if psi_value >= 0.25:
+        status = "critical"
+    elif psi_value >= 0.10:
+        status = "warning"
+
+    return {
+        "status": status,
+        "psi": round(psi_value, 4),
+        "ks_statistic": round(float(ks_stat), 4),
+        "thresholds": {
+            "psi_warning": 0.10,
+            "psi_critical": 0.25
+        },
+        "reference_size": len(baseline_scores),
+        "current_size": int(current_scores.size),
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @app.get("/model/info", tags=["Model"])

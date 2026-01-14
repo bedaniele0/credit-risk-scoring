@@ -1,0 +1,184 @@
+{
+  "report_type": "drift_monitoring",
+  "generated_at": "2025-12-10T13:18:12.741594",
+  "reference_period": "training_data",
+  "production_period": "2025-12",
+  "scores": {
+    "timestamp": "2025-12-10T13:18:12.741631",
+    "n_samples": 6000,
+    "metrics": {
+      "psi": {
+        "value": 0.0028,
+        "threshold_warning": 0.1,
+        "threshold_critical": 0.25,
+        "status": "OK"
+      },
+      "score_stats": {
+        "mean_reference": 0.2222,
+        "mean_production": 0.2222,
+        "std_reference": 0.2021,
+        "std_production": 0.2025,
+        "median_reference": 0.1478,
+        "median_production": 0.1464
+      }
+    },
+    "alerts": []
+  },
+  "features": {
+    "timestamp": "2025-12-10T13:18:12.744613",
+    "n_samples": 6000,
+    "features": {
+      "LIMIT_BAL": {
+        "csi": 0.0016,
+        "status": "OK"
+      },
+      "SEX": {
+        "csi": 0.0001,
+        "status": "OK"
+      },
+      "EDUCATION": {
+        "csi": 0.0003,
+        "status": "OK"
+      },
+      "MARRIAGE": {
+        "csi": 0.0006,
+        "status": "OK"
+      },
+      "AGE": {
+        "csi": 0.0029,
+        "status": "OK"
+      },
+      "PAY_0": {
+        "csi": 0.0011,
+        "status": "OK"
+      },
+      "PAY_2": {
+        "csi": 0.0,
+        "status": "OK"
+      },
+      "PAY_3": {
+        "csi": 0.0001,
+        "status": "OK"
+      },
+      "PAY_4": {
+        "csi": 0.0001,
+        "status": "OK"
+      },
+      "PAY_5": {
+        "csi": 0.0002,
+        "status": "OK"
+      },
+      "PAY_6": {
+        "csi": 0.0003,
+        "status": "OK"
+      },
+      "BILL_AMT1": {
+        "csi": 0.0021,
+        "status": "OK"
+      },
+      "BILL_AMT2": {
+        "csi": 0.0011,
+        "status": "OK"
+      },
+      "BILL_AMT3": {
+        "csi": 0.0013,
+        "status": "OK"
+      },
+      "BILL_AMT4": {
+        "csi": 0.0027,
+        "status": "OK"
+      },
+      "BILL_AMT5": {
+        "csi": 0.0009,
+        "status": "OK"
+      },
+      "BILL_AMT6": {
+        "csi": 0.0004,
+        "status": "OK"
+      },
+      "PAY_AMT1": {
+        "csi": 0.0022,
+        "status": "OK"
+      },
+      "PAY_AMT2": {
+        "csi": 0.0011,
+        "status": "OK"
+      },
+      "PAY_AMT3": {
+        "csi": 0.0006,
+        "status": "OK"
+      },
+      "PAY_AMT4": {
+        "csi": 0.0011,
+        "status": "OK"
+      },
+      "PAY_AMT5": {
+        "csi": 0.0011,
+        "status": "OK"
+      },
+      "PAY_AMT6": {
+        "csi": 0.0007,
+        "status": "OK"
+      },
+      "utilization_1": {
+        "csi": 0.0013,
+        "status": "OK"
+      },
+      "payment_ratio_1": {
+        "csi": 0.0003,
+        "status": "OK"
+      },
+      "payment_ratio_2": {
+        "csi": 0.0009,
+        "status": "OK"
+      },
+      "payment_ratio_3": {
+        "csi": 0.0009,
+        "status": "OK"
+      },
+      "payment_ratio_4": {
+        "csi": 0.0018,
+        "status": "OK"
+      },
+      "payment_ratio_5": {
+        "csi": 0.0024,
+        "status": "OK"
+      },
+      "payment_ratio_6": {
+        "csi": 0.002,
+        "status": "OK"
+      },
+      "EDUCATION_grouped": {
+        "csi": 0.0002,
+        "status": "OK"
+      },
+      "MARRIAGE_grouped": {
+        "csi": 0.0002,
+        "status": "OK"
+      },
+      "AGE_bin_26-35": {
+        "csi": 0.0016,
+        "status": "OK"
+      },
+      "AGE_bin_36-45": {
+        "csi": 0.0011,
+        "status": "OK"
+      },
+      "AGE_bin_46-60": {
+        "csi": 0.0003,
+        "status": "OK"
+      },
+      "AGE_bin_60+": {
+        "csi": 0.0,
+        "status": "OK"
+      }
+    },
+    "drifted_features": []
+  },
+  "summary": {
+    "overall_status": "HEALTHY",
+    "total_alerts": 0,
+    "drifted_features_count": 0,
+    "recommendation": "Modelo estable. Continuar monitoreo regular."
+  }
+}

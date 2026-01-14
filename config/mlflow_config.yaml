@@ -1,0 +1,327 @@
+# ============================================================================
+# mlflow_config.yaml - Configuración de MLflow para Credit Risk Scoring
+# ============================================================================
+# Configuración centralizada de MLflow tracking, experiments y model registry
+#
+# Autor: Ing. Daniel Varela Perez
+# Email: bedaniele0@gmail.com
+# Tel: +52 55 4189 3428
+# Metodología: DVP-PRO
+# ============================================================================
+
+# ====================
+# TRACKING
+# ====================
+tracking:
+  # URI del servidor de tracking
+  uri: "file:./mlruns"  # Local - cambiar a http://mlflow-server:5000 para remoto
+
+  # Nombre del experimento
+  experiment_name: "credit-risk-scoring"
+
+  # Tags por defecto en todos los runs
+  default_tags:
+    project: "credit-risk-scoring"
+    methodology: "DVP-PRO"
+    author: "Ing. Daniel Varela Perez"
+    domain: "credit-risk"
+    dataset: "UCI Taiwan Credit Card"
+
+  # Autologging
+  autolog:
+    enabled: true
+    log_models: true
+    log_input_examples: true
+    log_model_signatures: true
+    silent: false
+
+# ====================
+# MODEL REGISTRY
+# ====================
+registry:
+  # URI del model registry (puede ser diferente al tracking)
+  uri: null  # null = usar mismo que tracking
+
+  # Nombre del modelo registrado
+  registered_model_name: "credit-risk-model"
+
+  # Tags para modelos registrados
+  model_tags:
+    task: "binary_classification"
+    use_case: "credit_default_prediction"
+    calibration: "isotonic"
+    algorithm: "lightgbm"
+
+# ====================
+# METRICS
+# ====================
+metrics:
+  # Métricas principales de clasificación
+  classification:
+    - auc_roc
+    - ks_statistic
+    - recall
+    - precision
+    - f1
+    - accuracy
+    - specificity
+    - brier_score
+
+  # Métricas de negocio
+  business:
+    - expected_savings
+    - total_cost
+    - savings_percentage
+    - cost_false_positive
+    - cost_false_negative
+
+  # Métricas de confusion matrix
+  confusion_matrix:
+    - true_positives
+    - true_negatives
+    - false_positives
+    - false_negatives
+
+  # Métricas por dataset
+  datasets:
+    - train
+    - validation
+    - test
+
+# ====================
+# PARAMETERS
+# ====================
+parameters:
+  # Parámetros del modelo a trackear
+  model:
+    - model_type
+    - n_estimators
+    - max_depth
+    - learning_rate
+    - num_leaves
+    - min_child_samples
+    - subsample
+    - colsample_bytree
+    - reg_alpha
+    - reg_lambda
+    - random_state
+
+  # Parámetros de calibración
+  calibration:
+    - calibration_method
+    - out_of_fold
+
+  # Parámetros de threshold optimization
+  threshold:
+    - optimal_threshold
+    - cost_false_positive
+    - cost_false_negative
+    - threshold_method
+
+  # Parámetros de datos
+  data:
+    - test_size
+    - validation_size
+    - random_state
+    - n_samples
+    - n_features
+    - class_balance
+
+# ====================
+# ARTIFACTS
+# ====================
+artifacts:
+  # Modelos
+  models:
+    path: "models"
+    formats:
+      - joblib
+      - mlflow  # MLflow model format
+
+  # Plots y visualizaciones
+  plots:
+    path: "plots"
+    types:
+      - roc_curve
+      - confusion_matrix
+      - feature_importance
+      - calibration_curve
+      - precision_recall_curve
+      - threshold_optimization
+
+  # Datasets
+  datasets:
+    path: "data"
+    save_train: false
+    save_validation: true
+    save_test: true
+    save_predictions: true
+
+  # Reports
+  reports:
+    path: "reports"
+    formats:
+      - json
+      - html
+
+# ====================
+# PRODUCTION CRITERIA
+# ====================
+production:
+  # Criterios mínimos para pasar a producción
+  min_metrics:
+    auc_roc: 0.75
+    ks_statistic: 0.30
+    recall: 0.70
+    precision: 0.30
+    brier_score_max: 0.20  # Menor es mejor
+
+  # Métricas de negocio mínimas
+  min_business:
+    expected_savings: 1000000  # MXN
+    savings_percentage: 10  # %
+
+  # Validación de estabilidad
+  stability:
+    max_train_test_auc_diff: 0.05
+    max_train_test_ks_diff: 0.05
+
+  # Stage transitions automáticas
+  auto_transition:
+    enabled: false
+    from_stage: "Staging"
+    to_stage: "Production"
+    require_approval: true
+
+# ====================
+# COMPARISON
+# ====================
+comparison:
+  # Baseline para comparación
+  baseline:
+    model_type: "logistic_regression"
+    track_separately: true
+
+  # Modelos a comparar
+  models_to_compare:
+    - logistic_regression
+    - random_forest
+    - lightgbm
+    - xgboost
+
+  # Métricas principales para ranking
+  ranking_metrics:
+    primary: "auc_roc"
+    secondary: "ks_statistic"
+    tertiary: "expected_savings"
+
+# ====================
+# HYPERPARAMETER TUNING
+# ====================
+hyperparameter_tuning:
+  # Framework (optuna, hyperopt, grid_search)
+  framework: "optuna"
+
+  # Parent run para trials
+  parent_run_name: "hyperparameter_tuning"
+
+  # Nested runs
+  log_trials_as_nested: true
+
+  # Métricas a optimizar
+  optimize:
+    metric: "auc_roc"
+    direction: "maximize"  # maximize o minimize
+
+# ====================
+# LOGGING
+# ====================
+logging:
+  # Nivel de logging de MLflow
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+
+  # Log system metrics
+  log_system_metrics: true
+
+  # Intervalo de logging (segundos)
+  system_metrics_interval: 10
+
+  # Logs personalizados
+  custom_logs:
+    enabled: true
+    log_data_quality: true
+    log_feature_stats: true
+    log_model_size: true
+
+# ====================
+# ALERTS
+# ====================
+alerts:
+  # Alertas en caso de problemas
+  enabled: false
+
+  # Condiciones de alerta
+  conditions:
+    - metric: "auc_roc"
+      operator: "less_than"
+      threshold: 0.70
+      message: "⚠️ AUC-ROC below minimum threshold"
+
+    - metric: "ks_statistic"
+      operator: "less_than"
+      threshold: 0.25
+      message: "⚠️ KS Statistic below minimum threshold"
+
+    - metric: "expected_savings"
+      operator: "less_than"
+      threshold: 500000
+      message: "⚠️ Expected savings too low"
+
+  # Canales de notificación
+  channels:
+    slack: false
+    email: false
+    teams: false
+
+# ====================
+# CLEANUP
+# ====================
+cleanup:
+  # Auto-cleanup de runs antiguos
+  enabled: false
+
+  # Retención de runs
+  retention:
+    days: 90
+    keep_min_runs: 10
+
+  # Excluir runs con tags específicos
+  exclude_tags:
+    - "production"
+    - "baseline"
+    - "champion"
+
+# ====================
+# DVP-PRO METADATA
+# ====================
+dvp_pro:
+  # Fase del proyecto
+  phase: "F5-Modelado"  # F0-F10
+
+  # Versionado
+  version: "1.0.0"
+
+  # Contacto
+  contact:
+    author: "Ing. Daniel Varela Perez"
+    email: "bedaniele0@gmail.com"
+    phone: "+52 55 4189 3428"
+
+  # Dataset info
+  dataset:
+    name: "UCI Taiwan Credit Card Dataset"
+    url: "https://archive.ics.uci.edu/ml/datasets/default+of+credit+card+clients"
+    size: 30000
+    features: 23
+    target: "default.payment.next.month"
+    default_rate: 0.22
