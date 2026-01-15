@@ -26,6 +26,8 @@ Thumbs.db
 data/raw/*.csv
 data/raw/*.xlsx
 data/processed/*.csv
+!data/processed/X_test.csv
+!data/processed/y_test.csv
 
 # MLflow
 mlruns/
