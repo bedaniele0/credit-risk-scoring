@@ -1,4 +1,4 @@
-name: ci
+name: tests
 
 on:
   push:
@@ -19,4 +19,4 @@ jobs:
           pip install -r requirements.txt
       - name: Run tests
         run: |
-          pytest tests/ -v --cov=src
+          pytest tests/ -v --cov=src --cov-report=term
